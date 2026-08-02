@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: honeypot
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
+            archive: zip
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Build release binary
+        run: cargo build --release --locked --bin "$BIN_NAME" --target ${{ matrix.target }}
+        shell: bash
+
+      - name: Package artifact
+        if: startsWith(github.ref, 'refs/tags/')
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          out_dir="target/${{ matrix.target }}/release"
+          pkg_name="${BIN_NAME}-${{ matrix.target }}"
+          stage_dir="staging/${pkg_name}"
+          mkdir -p "$stage_dir"
+
+          cp "${out_dir}/${BIN_NAME}${{ matrix.ext }}" "$stage_dir/"
+          cp "${out_dir}/README.md" "$stage_dir/"
+
+          cd staging
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            7z a "${pkg_name}.zip" "${pkg_name}" >/dev/null
+            echo "asset=staging/${pkg_name}.zip" >>"$GITHUB_OUTPUT"
+          else
+            tar -czf "${pkg_name}.tar.gz" "${pkg_name}"
+            echo "asset=staging/${pkg_name}.tar.gz" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.BIN_NAME }}-${{ matrix.target }}
+          path: ${{ steps.package.outputs.asset }}
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: create release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -1,0 +1,8 @@
+[advisories]
+ignore = [
+    # serenity(依存ツリー)がまだ対応版へ更新されておらず、こちらでは修正を取り込めないため。
+    "RUSTSEC-2026-0049",
+    "RUSTSEC-2026-0098",
+    "RUSTSEC-2026-0099",
+    "RUSTSEC-2026-0104"
+]
