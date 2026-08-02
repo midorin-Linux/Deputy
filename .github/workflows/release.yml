@@ -15,7 +15,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  BIN_NAME: honeypot
+  BIN_NAME: deputy
 
 jobs:
   build:
