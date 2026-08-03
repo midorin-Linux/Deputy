@@ -1,0 +1,19 @@
+env:
+  # debug | info | warn | error
+  log_level: info
+
+discord:
+  token: "YOUR_DISCORD_BOT_TOKEN"
+
+ai:
+  # -----プロバイダー設定-----
+  api_key: YOUR_API_KEY_HERE
+  # https://api.openai.com/v1 -> https://api.openai.com/v1/models
+  base_url: https://api.openai.com/v1
+  model_id: gpt-oss-20b
+
+  # AIプロバイダへのリクエストタイムアウト（秒）。ハング時に判定が無期限ブロックするのを防ぐ。デフォルト300
+  request_timeout_secs: 300
+
+  # -----モデル設定-----
+  support_image: false

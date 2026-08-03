@@ -1,6 +1,6 @@
 # Development
 /target
-.env
+settings.yml
 
 # IDE
 /.idea
