@@ -41,5 +41,10 @@ async fn main() -> Result<()> {
         .map_err(|err| startup_error(&spinner, "Failed to load configuration", err))?;
     info!("Configuration loaded successfully");
 
+    // 終了処理
+    spinner.finish_and_clear();
+    info!("Startup completed successfully");
+    println!("  {} Startup completed successfully", "✓".green());
+
     Ok(())
 }
