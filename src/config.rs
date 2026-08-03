@@ -14,7 +14,7 @@ pub const SETTINGS_FILE: &str = "settings.yml";
 pub struct Config {
     pub env: EnvConfig,
     pub discord: DiscordConfig,
-    pub ai_config: AiConfig
+    pub ai: AiConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
