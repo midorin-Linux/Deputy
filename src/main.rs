@@ -1,12 +1,14 @@
 mod config;
 mod secret_key;
+mod telemetry;
 
 use anyhow::{Error, Result};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use tokio::time::sleep;
 use tracing::info;
-use crate::config::Config;
+
+use crate::{config::Config, telemetry::init_tracing};
 
 fn startup_error(spinner: &ProgressBar, context: &str, err: Error) -> Error {
     spinner.finish_and_clear();
@@ -29,6 +31,12 @@ async fn main() -> Result<()> {
     );
     spinner.enable_steady_tick(std::time::Duration::from_millis(80));
 
+    // Tracingの初期化
+    let _guard = init_tracing()
+        .map_err(|err| startup_error(&spinner, "Failed to initialize tracing", err))?;
+    info!("Tracing initialized successfully");
+
+    // Configの読み込み
     let _config = Config::load()
         .map_err(|err| startup_error(&spinner, "Failed to load configuration", err))?;
     info!("Configuration loaded successfully");
