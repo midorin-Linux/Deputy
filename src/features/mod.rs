@@ -1,4 +1,5 @@
 pub mod member_log;
+pub mod voice_log;
 
 use std::sync::Arc;
 
@@ -11,6 +12,13 @@ pub fn all(cfg: &Config, store: Arc<dyn LogStore>) -> anyhow::Result<Vec<Box<dyn
     if let Some(member_log_cfg) = member_log::config::MemberLogConfig::load(cfg)? {
         v.push(Box::new(member_log::MemberLog::new(
             member_log_cfg,
+            store.clone(),
+        )));
+    }
+
+    if let Some(voice_log_cfg) = voice_log::config::VoiceLogConfig::load(cfg)? {
+        v.push(Box::new(voice_log::VoiceLog::new(
+            voice_log_cfg,
             store.clone(),
         )));
     }

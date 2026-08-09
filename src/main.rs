@@ -51,7 +51,8 @@ async fn main() -> Result<()> {
     }
     let registry = Registry::new(feats);
 
-    let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS;
+    let intents =
+        GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILD_VOICE_STATES;
 
     let mut client = Client::builder(config.discord.token.expose(), intents)
         .event_handler(registry)
