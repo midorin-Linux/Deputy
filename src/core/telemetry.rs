@@ -5,7 +5,7 @@ pub use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::EnvFilter;
 
-use crate::{config::SETTINGS_FILE, secret_key::TruncatingEventFormat};
+use crate::core::{config::SETTINGS_FILE, secret_key::TruncatingEventFormat};
 
 fn read_log_level() -> String {
     ConfigBuilder::builder()
@@ -21,13 +21,15 @@ fn read_log_level() -> String {
 }
 
 pub fn init_tracing() -> Result<WorkerGuard> {
-    match std::fs::exists("logs") {
-        Ok(false) => std::fs::create_dir_all("logs").context("Failed to create logs directory")?,
+    match std::fs::exists("../../logs") {
+        Ok(false) => {
+            std::fs::create_dir_all("../../logs").context("Failed to create logs directory")?
+        }
         Ok(true) => info!("logs directory already exists"),
         _ => bail!("Failed to check logs directory existence"),
     }
 
-    let appender = rolling::daily("logs", "deputy.log");
+    let appender = rolling::daily("../../logs", "deputy.log");
     let (non_blocking, guard) = non_blocking(appender);
 
     let env_filter = EnvFilter::new(read_log_level());

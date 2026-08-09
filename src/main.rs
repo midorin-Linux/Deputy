@@ -1,14 +1,15 @@
-mod config;
-mod secret_key;
-mod telemetry;
+pub mod core;
+pub mod features;
+
+use core::{config::Config, registry::Registry, store::NoopStore, telemetry::init_tracing};
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use serenity::all::{Client, GatewayIntents};
 use tokio::time::sleep;
 use tracing::info;
-
-use crate::{config::Config, telemetry::init_tracing};
 
 fn startup_error(spinner: &ProgressBar, context: &str, err: Error) -> Error {
     spinner.finish_and_clear();
@@ -37,14 +38,32 @@ async fn main() -> Result<()> {
     info!("Tracing initialized successfully");
 
     // Configの読み込み
-    let _config = Config::load()
+    let config = Config::load()
         .map_err(|err| startup_error(&spinner, "Failed to load configuration", err))?;
     info!("Configuration loaded successfully");
+
+    // 機能の組み立て（有効/無効は設定ファイルで完結する）
+    let store = Arc::new(NoopStore);
+    let feats = features::all(&config, store)
+        .map_err(|err| startup_error(&spinner, "Failed to build features", err))?;
+    for feature in &feats {
+        info!(feature = feature.name(), "feature enabled");
+    }
+    let registry = Registry::new(feats);
+
+    let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS;
+
+    let mut client = Client::builder(config.discord.token.expose(), intents)
+        .event_handler(registry)
+        .await
+        .map_err(|err| startup_error(&spinner, "Failed to build Discord client", err.into()))?;
 
     // 終了処理
     spinner.finish_and_clear();
     info!("Startup completed successfully");
     println!("  {} Startup completed successfully", "✓".green());
+
+    client.start().await?;
 
     Ok(())
 }

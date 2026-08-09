@@ -17,3 +17,10 @@ ai:
 
   # -----モデル設定-----
   support_image: false
+
+features:
+  member_log:
+    enabled: true
+    log_channel: 123456789012345678
+    # アカウント作成からこの日数未満なら新規垢として警告色で通知する
+    new_account_warn_days: 7

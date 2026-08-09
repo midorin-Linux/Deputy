@@ -1,0 +1,9 @@
+pub mod commands;
+pub mod config;
+pub mod discord;
+pub mod error;
+pub mod feature;
+pub mod registry;
+pub mod secret_key;
+pub mod store;
+pub mod telemetry;

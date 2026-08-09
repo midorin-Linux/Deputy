@@ -1,11 +1,11 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use config::{Config as ConfigBuilder, File};
 use serde::Deserialize;
 use tracing::{debug, info};
 
-use crate::secret_key::SecretKey;
+use crate::core::{error::ConfigError, secret_key::SecretKey};
 
 /// 設定ファイルのパス。`Config`と`logging`の軽量読み取りで共有する。
 pub const SETTINGS_FILE: &str = "settings.yml";
@@ -15,6 +15,11 @@ pub struct Config {
     pub env: EnvConfig,
     pub discord: DiscordConfig,
     pub ai: AiConfig,
+
+    /// 機能ごとの設定セクション。`core`は中身を知らず、各`features/<name>/config.rs`が
+    /// 自分の名前のキーを取り出してデシリアライズする。
+    #[serde(default)]
+    pub features: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -90,7 +95,7 @@ impl Config {
 
     pub fn validate(&self) -> Result<()> {
         if self.discord.token.expose().trim().is_empty() {
-            bail!("discord.token must not be empty");
+            return Err(ConfigError::MissingDiscordToken.into());
         }
 
         Ok(())

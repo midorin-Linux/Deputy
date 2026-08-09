@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0"
 async-openai = { version = "0.41", features = ["chat-completion"] }
+async-trait = "0.1"
 backoff = { version = "0.4", features = ["tokio"] }
 base64 = "0.23"
 chrono = "0.4"
