@@ -8,6 +8,9 @@ use crate::core::{config::Config, error::ConfigError};
 pub struct MemberLogConfig {
     #[serde(default)]
     pub enabled: bool,
+    /// 通知先チャンネルID。`enabled: false`なら省略可（未指定は0となり、
+    /// 有効時のみ`load`の検証でエラーになる）。
+    #[serde(default)]
     pub log_channel: u64,
     #[serde(default = "default_new_account_warn_days")]
     pub new_account_warn_days: i64,
@@ -67,8 +70,27 @@ mod tests {
 
     #[test]
     fn missing_section_is_disabled() {
-        let cfg = config_with(serde_json::json!({ "enabled": false, "log_channel": 1 }));
+        let mut cfg = config_with(serde_json::json!({}));
+        cfg.features.remove("member_log");
         assert!(MemberLogConfig::load(&cfg).unwrap().is_none());
+    }
+
+    #[test]
+    fn disabled_section_without_log_channel_is_accepted() {
+        // 無効化の自然な書き方（enabledだけ残してlog_channel行を消す）で起動が止まらないこと。
+        let cfg = config_with(serde_json::json!({ "enabled": false }));
+        assert!(MemberLogConfig::load(&cfg).unwrap().is_none());
+    }
+
+    #[test]
+    fn enabled_section_without_log_channel_is_rejected_at_load() {
+        // 有効なのに通知先が無いのは設定ミスなので、起動時に明確なエラーで止める。
+        let cfg = config_with(serde_json::json!({ "enabled": true }));
+        let err = MemberLogConfig::load(&cfg).unwrap_err();
+        assert!(
+            err.to_string().contains("log_channel"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]

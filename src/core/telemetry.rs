@@ -49,15 +49,22 @@ fn build_env_filter(directives: &str) -> EnvFilter {
         return EnvFilter::new(DEFAULT_LOG_LEVEL);
     }
 
-    let is_compound = trimmed.contains(['=', ',']);
-    if !is_compound
-        && !VALID_LEVELS
-            .iter()
-            .any(|level| level.eq_ignore_ascii_case(trimmed))
-    {
+    // カンマ区切りの各要素のうち、`=`を含まない裸の単語はレベル名でなければならない。
+    // （`deputy=debug`のようなターゲット指定は`EnvFilter`へ委ねる。）
+    // 複合指定に紛れた打ち間違い（例: `inof,serenity=warn`）もここで捕まえる。
+    let has_invalid_bare_level = trimmed
+        .split(',')
+        .map(str::trim)
+        .filter(|segment| !segment.contains('='))
+        .any(|segment| {
+            !VALID_LEVELS
+                .iter()
+                .any(|level| level.eq_ignore_ascii_case(segment))
+        });
+    if has_invalid_bare_level {
         eprintln!(
             "  warning: unknown env.log_level {trimmed:?}; falling back to {DEFAULT_LOG_LEVEL:?} \
-             (expected one of {VALID_LEVELS:?})"
+             (bare words must be one of {VALID_LEVELS:?}; use `target=level` for per-target filters)"
         );
         return EnvFilter::new(DEFAULT_LOG_LEVEL);
     }
@@ -121,6 +128,24 @@ mod tests {
         // 素通しすると`deputy`のログが黙って全部消えるので、既定値へ落ちることを保証する。
         assert_eq!(build_env_filter("inof").to_string(), DEFAULT_LOG_LEVEL);
         assert_eq!(build_env_filter("verbose").to_string(), DEFAULT_LOG_LEVEL);
+    }
+
+    #[test]
+    fn misspelled_level_inside_compound_directive_also_falls_back() {
+        // 複合指定に紛れた裸の打ち間違いも同様に捕まえる。
+        // （`inof`はターゲット名として解釈され、deputyのログだけが黙って消えるため。）
+        assert_eq!(
+            build_env_filter("inof,serenity=warn").to_string(),
+            DEFAULT_LOG_LEVEL
+        );
+    }
+
+    #[test]
+    fn compound_directive_with_valid_bare_level_is_accepted() {
+        // 「全体はwarn、serenityだけerror」のような正しい複合指定は通す。
+        let filter = build_env_filter("warn,serenity=error").to_string();
+        assert!(filter.contains("warn"), "got {filter:?}");
+        assert!(filter.contains("serenity=error"), "got {filter:?}");
     }
 
     #[test]
