@@ -28,7 +28,7 @@ impl MemberLog {
     }
 
     fn log_channel(&self) -> ChannelId {
-        ChannelId::new(self.cfg.log_channel)
+        self.cfg.log_channel()
     }
 
     async fn handle_addition(&self, ctx: &Context, member: &Member) -> anyhow::Result<()> {

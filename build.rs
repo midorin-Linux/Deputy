@@ -2,6 +2,7 @@ use std::{env, fs, path::PathBuf};
 
 fn main() {
     println!("cargo:rerun-if-changed=README.md");
+    println!("cargo:rerun-if-changed=settings.example.yml");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -21,8 +22,11 @@ fn main() {
             .expect("failed to copy README.md to target directory");
     }
 
-    if settings_example_src.exists() {
-        fs::copy(&settings_example_src, target_dir.join("settings.yml"))
+    // 生成するのは「雛形がまだ無いとき」だけ。既存の`settings.yml`には利用者が
+    // トークン等を書き込んでいるため、ビルドのたびに例で上書きすると設定が消える。
+    let settings_dst = target_dir.join("settings.yml");
+    if settings_example_src.exists() && !settings_dst.exists() {
+        fs::copy(&settings_example_src, &settings_dst)
             .expect("failed to copy settings.example.yml to settings.yml in target directory");
     }
 }
