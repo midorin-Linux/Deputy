@@ -120,3 +120,76 @@ impl EventHandler for Registry {
             .await;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serenity::all::{CommandInteraction, Context, FullEvent};
+
+    use super::*;
+
+    struct StubFeature {
+        name: &'static str,
+        priority: i32,
+    }
+
+    #[async_trait::async_trait]
+    impl Feature for StubFeature {
+        fn name(&self) -> &'static str {
+            self.name
+        }
+
+        fn priority(&self) -> i32 {
+            self.priority
+        }
+
+        async fn on_event(&self, _ctx: &Context, _ev: &FullEvent) -> anyhow::Result<Flow> {
+            Ok(Flow::Continue)
+        }
+
+        async fn on_command(&self, _ctx: &Context, _ic: &CommandInteraction) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn features_are_ordered_by_priority_descending() {
+        let features: Vec<Box<dyn Feature>> = vec![
+            Box::new(StubFeature {
+                name: "low",
+                priority: 0,
+            }),
+            Box::new(StubFeature {
+                name: "high",
+                priority: 10,
+            }),
+            Box::new(StubFeature {
+                name: "mid",
+                priority: 5,
+            }),
+        ];
+
+        let registry = Registry::new(features);
+
+        let names: Vec<&str> = registry.features.iter().map(|f| f.name()).collect();
+        assert_eq!(names, vec!["high", "mid", "low"]);
+    }
+
+    #[test]
+    fn equal_priority_preserves_input_order() {
+        let features: Vec<Box<dyn Feature>> = vec![
+            Box::new(StubFeature {
+                name: "first",
+                priority: 0,
+            }),
+            Box::new(StubFeature {
+                name: "second",
+                priority: 0,
+            }),
+        ];
+
+        let registry = Registry::new(features);
+
+        let names: Vec<&str> = registry.features.iter().map(|f| f.name()).collect();
+        assert_eq!(names, vec!["first", "second"]);
+    }
+}

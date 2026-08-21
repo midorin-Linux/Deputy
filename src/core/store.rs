@@ -55,3 +55,54 @@ pub async fn record_or_warn(store: &Arc<dyn LogStore>, entry: LogEntry) {
         warn!(feature, error = %err, "failed to persist log entry");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    fn entry() -> LogEntry {
+        LogEntry::new("test_feature", GuildId::new(1), "message")
+    }
+
+    struct FailingStore;
+
+    #[async_trait::async_trait]
+    impl LogStore for FailingStore {
+        async fn record(&self, _entry: LogEntry) -> anyhow::Result<()> {
+            Err(anyhow::anyhow!("boom"))
+        }
+    }
+
+    struct CountingStore(AtomicUsize);
+
+    #[async_trait::async_trait]
+    impl LogStore for CountingStore {
+        async fn record(&self, _entry: LogEntry) -> anyhow::Result<()> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn store_failure_is_swallowed_not_propagated() {
+        // 戻り値は()なので、パニックせず戻ってくること自体がテストの主張。
+        let store: Arc<dyn LogStore> = Arc::new(FailingStore);
+        record_or_warn(&store, entry()).await;
+    }
+
+    #[tokio::test]
+    async fn entry_is_forwarded_to_store() {
+        let store = Arc::new(CountingStore(AtomicUsize::new(0)));
+        let dyn_store: Arc<dyn LogStore> = store.clone();
+        record_or_warn(&dyn_store, entry()).await;
+        assert_eq!(store.0.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn noop_store_accepts_entry() {
+        let store: Arc<dyn LogStore> = Arc::new(NoopStore);
+        record_or_warn(&store, entry()).await;
+    }
+}

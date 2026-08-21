@@ -138,3 +138,65 @@ where
 
     Ok(Some(parsed))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_config(token: &str) -> Config {
+        serde_json::from_value(serde_json::json!({
+            "env": { "log_level": "info" },
+            "discord": { "token": token },
+            "ai": { "api_key": "k", "base_url": "u", "model_id": "m" },
+            "features": {},
+        }))
+        .expect("base config must deserialize")
+    }
+
+    #[test]
+    fn validate_accepts_non_empty_token() {
+        assert!(base_config("t").validate().is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_empty_token() {
+        let err = base_config("").validate().unwrap_err();
+        assert!(err.to_string().contains("discord.token"));
+    }
+
+    #[test]
+    fn validate_rejects_whitespace_only_token() {
+        let err = base_config("   ").validate().unwrap_err();
+        assert!(err.to_string().contains("discord.token"));
+    }
+
+    #[derive(Debug, Clone, Deserialize)]
+    struct DummyFeatureConfig {
+        #[serde(default)]
+        enabled: bool,
+        #[serde(default)]
+        log_channel: u64,
+    }
+
+    impl FeatureToggle for DummyFeatureConfig {
+        fn is_enabled(&self) -> bool {
+            self.enabled
+        }
+
+        fn raw_log_channel(&self) -> u64 {
+            self.log_channel
+        }
+    }
+
+    #[test]
+    fn load_feature_config_reports_malformed_section() {
+        let mut cfg = base_config("t");
+        // log_channelが文字列など、期待する型と合わない場合はデシリアライズ失敗として弾く。
+        cfg.features.insert(
+            "dummy".to_string(),
+            serde_json::json!({ "enabled": true, "log_channel": "not-a-number" }),
+        );
+        let err = load_feature_config::<DummyFeatureConfig>(&cfg, "dummy").unwrap_err();
+        assert!(err.to_string().contains("dummy"), "unexpected error: {err}");
+    }
+}
