@@ -1,6 +1,6 @@
 use serenity::all::{
     Command, Context, CreateCommand, EventHandler, FullEvent, GuildId, Interaction, Member, Ready,
-    User,
+    User, VoiceState,
 };
 use tracing::{error, info, warn};
 
@@ -46,6 +46,11 @@ impl Registry {
     }
 }
 
+/// 各`EventHandler`メソッドは対応する`FullEvent`へ詰め直して`dispatch`へ渡すだけ。
+///
+/// 機能が`on_event`で受け取れるのは、ここで明示的に転送したイベントに限られる。
+/// 新しい`FullEvent`を扱う機能を追加したら、対応するメソッドをここへ実装すること
+/// （未実装だと`EventHandler`の既定実装が黙って握り潰し、機能が沈黙する）。
 #[async_trait::async_trait]
 impl EventHandler for Registry {
     async fn ready(&self, ctx: Context, data_about_bot: Ready) {
@@ -83,6 +88,11 @@ impl EventHandler for Registry {
             },
         )
         .await;
+    }
+
+    async fn voice_state_update(&self, ctx: Context, old: Option<VoiceState>, new: VoiceState) {
+        self.dispatch(&ctx, FullEvent::VoiceStateUpdate { old, new })
+            .await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {

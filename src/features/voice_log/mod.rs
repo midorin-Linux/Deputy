@@ -27,7 +27,7 @@ impl VoiceLog {
     }
 
     fn log_channel(&self) -> ChannelId {
-        ChannelId::new(self.cfg.log_channel)
+        self.cfg.log_channel()
     }
 
     async fn handle_update(
