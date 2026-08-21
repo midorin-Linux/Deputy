@@ -7,12 +7,11 @@ use config::MemberLogConfig;
 use serenity::all::{
     ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, Member, Timestamp, User,
 };
-use tracing::warn;
 
 use crate::core::{
     discord::embed::{log_embed, warn_embed},
     feature::{Feature, Flow},
-    store::{LogEntry, LogStore},
+    store::{LogEntry, LogStore, record_or_warn},
 };
 
 /// ギルド入退出ログ機能。`core/discord/embed.rs`の共通ビルダを使い、
@@ -57,9 +56,7 @@ impl MemberLog {
 
         let entry =
             LogEntry::new("member_log", member.guild_id, "member joined").with_user(member.user.id);
-        if let Err(err) = self.store.record(entry).await {
-            warn!(error = %err, "failed to persist member_log entry");
-        }
+        record_or_warn(&self.store, entry).await;
 
         Ok(())
     }
@@ -80,9 +77,7 @@ impl MemberLog {
             .await?;
 
         let entry = LogEntry::new("member_log", guild_id, "member left").with_user(user.id);
-        if let Err(err) = self.store.record(entry).await {
-            warn!(error = %err, "failed to persist member_log entry");
-        }
+        record_or_warn(&self.store, entry).await;
 
         Ok(())
     }

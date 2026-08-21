@@ -1,4 +1,4 @@
-use std::{fmt as stdfmt, fmt};
+use std::fmt;
 
 use chrono::Local;
 use secrecy::{ExposeSecret, SecretString, zeroize::Zeroize};
@@ -68,7 +68,7 @@ where
         _ctx: &FmtContext<'_, S, N>,
         mut writer: Writer<'_>,
         event: &Event<'_>,
-    ) -> stdfmt::Result {
+    ) -> fmt::Result {
         write!(
             writer,
             "{} {:<5} {}",
@@ -119,7 +119,7 @@ impl Visit for TruncatingVisitor {
             .push((field.name().to_string(), truncate_value(value)));
     }
 
-    fn record_debug(&mut self, field: &Field, value: &dyn stdfmt::Debug) {
+    fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         self.fields.push((
             field.name().to_string(),
             truncate_value(&format!("{value:?}")),

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serenity::all::CreateCommand;
+use tracing::warn;
 
 use crate::core::feature::Feature;
 
@@ -17,8 +18,23 @@ impl CommandRouter {
 
         for (index, feature) in features.iter().enumerate() {
             for command in feature.commands() {
-                if let Some(name) = command_name(&command) {
-                    routes.insert(name, index);
+                match command_name(&command) {
+                    Some(name) => {
+                        if let Some(prev_index) = routes.insert(name.clone(), index) {
+                            warn!(
+                                command = %name,
+                                feature = feature.name(),
+                                previous_feature = features[prev_index].name(),
+                                "duplicate slash command name; only the last feature will receive it"
+                            );
+                        }
+                    }
+                    None => {
+                        warn!(
+                            feature = feature.name(),
+                            "command has no name in its JSON representation; it will be registered with Discord but can never be routed"
+                        );
+                    }
                 }
                 commands.push(command);
             }

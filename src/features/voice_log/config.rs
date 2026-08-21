@@ -1,8 +1,7 @@
-use anyhow::Context;
 use serde::Deserialize;
 use serenity::all::ChannelId;
 
-use crate::core::{config::Config, error::ConfigError};
+use crate::core::config::{Config, FeatureToggle, load_feature_config};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct VoiceLogConfig {
@@ -14,30 +13,22 @@ pub struct VoiceLogConfig {
     pub log_channel: u64,
 }
 
+impl FeatureToggle for VoiceLogConfig {
+    fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn raw_log_channel(&self) -> u64 {
+        self.log_channel
+    }
+}
+
 impl VoiceLogConfig {
-    /// `cfg.features`から`voice_log`セクションを取り出す。
+    /// `cfg.features`から`voice_log`セクションを取り出し、`enabled` / `log_channel`の
+    /// 共通ルール（`core::config::load_feature_config`）で検証する。
     /// セクションが無い、または`enabled = false`なら`None`。
     pub fn load(cfg: &Config) -> anyhow::Result<Option<Self>> {
-        let Some(raw) = cfg.features.get("voice_log") else {
-            return Ok(None);
-        };
-
-        let parsed: Self =
-            serde_json::from_value(raw.clone()).context("failed to parse features.voice_log")?;
-
-        if !parsed.enabled {
-            return Ok(None);
-        }
-
-        // `ChannelId::new(0)`はpanicするので、通知先が確定する起動時に弾く。
-        if parsed.log_channel == 0 {
-            return Err(ConfigError::InvalidLogChannel {
-                feature: "voice_log",
-            }
-            .into());
-        }
-
-        Ok(Some(parsed))
+        load_feature_config(cfg, "voice_log")
     }
 
     /// 通知先チャンネル。`load`で0でないことを検証済みのため、ここではpanicしない。

@@ -7,12 +7,11 @@ use std::sync::Arc;
 use config::VoiceLogConfig;
 use diff::diff_channel;
 use serenity::all::{ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, VoiceState};
-use tracing::warn;
 
 use crate::core::{
     discord::embed::log_embed,
     feature::{Feature, Flow},
-    store::{LogEntry, LogStore},
+    store::{LogEntry, LogStore, record_or_warn},
 };
 
 /// VC入退出ログ機能。チャンネルの変化のみを通知し、ミュート切替などは無視する。
@@ -54,9 +53,7 @@ impl VoiceLog {
 
         if let Some(guild_id) = new.guild_id {
             let entry = LogEntry::new("voice_log", guild_id, title).with_user(new.user_id);
-            if let Err(err) = self.store.record(entry).await {
-                warn!(error = %err, "failed to persist voice_log entry");
-            }
+            record_or_warn(&self.store, entry).await;
         }
 
         Ok(())

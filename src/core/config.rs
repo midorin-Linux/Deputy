@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{Context, Result};
 use config::{Config as ConfigBuilder, File};
-use serde::Deserialize;
+use serde::{Deserialize, de::DeserializeOwned};
 use tracing::{debug, info};
 
 use crate::core::{error::ConfigError, secret_key::SecretKey};
@@ -100,4 +100,41 @@ impl Config {
 
         Ok(())
     }
+}
+
+/// `enabled` / `log_channel`という同じ形を持つ機能設定が実装するトレイト。
+/// `load_feature_config`はこれだけを使って有効/無効判定とチャンネルIDの検証を行う。
+pub trait FeatureToggle {
+    fn is_enabled(&self) -> bool;
+    /// 検証前の生のチャンネルID。0は「未指定」を意味する。
+    fn raw_log_channel(&self) -> u64;
+}
+
+/// `cfg.features`から`name`セクションを取り出し、`enabled` / `log_channel`の
+/// 共通ルールで検証する。各`features/<name>/config.rs`の`load`はこれへ委譲するだけでよい。
+///
+/// ルール（member_log・voice_logの両方で必要だったため、ここへ一本化する）：
+/// - セクションが無い、または`enabled = false`なら`None`。
+/// - 有効なのに`log_channel`が0（未指定）なら`ConfigError::InvalidLogChannel`。
+///   `ChannelId::new(0)`は実行時にpanicするため、起動時に前倒しで弾く。
+pub fn load_feature_config<T>(cfg: &Config, name: &'static str) -> Result<Option<T>>
+where
+    T: DeserializeOwned + FeatureToggle,
+{
+    let Some(raw) = cfg.features.get(name) else {
+        return Ok(None);
+    };
+
+    let parsed: T = serde_json::from_value(raw.clone())
+        .with_context(|| format!("failed to parse features.{name}"))?;
+
+    if !parsed.is_enabled() {
+        return Ok(None);
+    }
+
+    if parsed.raw_log_channel() == 0 {
+        return Err(ConfigError::InvalidLogChannel { feature: name }.into());
+    }
+
+    Ok(Some(parsed))
 }
