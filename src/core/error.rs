@@ -12,4 +12,13 @@ pub enum ConfigError {
         "features.{feature}.log_channel must be set to a valid Discord channel ID (missing or 0)"
     )]
     InvalidLogChannel { feature: &'static str },
+
+    /// `log_channel`以外の、機能固有の設定値が不正な場合。
+    /// 共通ルール（`FeatureToggle`）に載らない検証は各`features/<name>/config.rs`が行い、
+    /// この型でまとめて起動時エラーにする。
+    #[error("features.{feature}: {detail}")]
+    InvalidFeatureSetting {
+        feature: &'static str,
+        detail: String,
+    },
 }

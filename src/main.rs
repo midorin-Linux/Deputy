@@ -52,8 +52,14 @@ async fn main() -> Result<()> {
     }
     let registry = Registry::new(feats);
 
-    let intents =
-        GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILD_VOICE_STATES;
+    // `GUILD_MEMBERS`と`MESSAGE_CONTENT`は特権インテント。Developer Portalで有効化しないと
+    // ゲートウェイがclose code 4014で切断される。機能の有効/無効に関わらず常に要求するため、
+    // honeypotを使わない構成でも`MESSAGE_CONTENT`の有効化が要る（README参照）。
+    let intents = GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MEMBERS
+        | GatewayIntents::GUILD_VOICE_STATES
+        | GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT;
 
     spinner.set_message("Connecting to Discord...");
     let mut client = Client::builder(config.discord.token.expose(), intents)

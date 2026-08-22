@@ -1,6 +1,6 @@
 use serenity::all::{
-    Command, Context, CreateCommand, EventHandler, FullEvent, GuildId, Interaction, Member, Ready,
-    User, VoiceState,
+    Command, Context, CreateCommand, EventHandler, FullEvent, GuildId, Interaction, Member,
+    Message, Ready, User, VoiceState,
 };
 use tracing::{error, info, warn};
 
@@ -64,6 +64,11 @@ impl EventHandler for Registry {
         }
 
         self.dispatch(&ctx, FullEvent::Ready { data_about_bot })
+            .await;
+    }
+
+    async fn message(&self, ctx: Context, new_message: Message) {
+        self.dispatch(&ctx, FullEvent::Message { new_message })
             .await;
     }
 

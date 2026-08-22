@@ -1,8 +1,8 @@
 # AGENTS.md
 
 個人用DiscordボットアプリケーションDeputy（Rust, edition 2024）。`serenity`でGatewayに接続し、
-入退出ログ（member_log）・VC入退出ログ（voice_log）を通知する。AI連携（`AiConfig`/`async-openai`）は
-設定・依存としては存在するが、featureとしてはまだ登録されていない（`src/features/mod.rs`参照、未実装）。
+入退出ログ（member_log）・VC入退出ログ（voice_log）・ハニーポットによるスパム自動BAN（honeypot）を提供する。
+AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用する。
 
 ## よく使うコマンド
 - ビルド: `cargo build`
@@ -36,6 +36,10 @@
       14日保持。`env.log_level`のパース失敗時は黙って全ログ消失させず`info`にフォールバックする。
 - `src/features/<name>/`: 機能の縦切り単位（vertical slice）。`mod.rs`（Feature実装）/`config.rs`（設定）/
   `events.rs`等。新機能追加は`src/features/mod.rs::all()`に1行足すだけで完結させる設計。
+- `src/features/honeypot/`: 監視チャンネルへの投稿をルール（招待リンク/ロールメンション/メンション数）と
+  LLMで判定し、スパムをBANする。`priority()`は100（Message系で最優先）、処分したメッセージは`Flow::Consume`で
+  後続へ流さない。システムプロンプトは`PROMPT.md`（`settings.yml`と同じくカレントディレクトリ基準）。
+  純ロジック（`rules.rs`/`verdict.rs`/`events.rs`/`dedup.rs`/`action.rs`）はDiscord接続なしでテストできる。
 - 依存方向: `main → features → core`。`core`は`features`をimportしない。
 
 ## コード規約
@@ -52,4 +56,6 @@
 - Discordの`GUILD_MEMBERS`は特権インテント。Developer Portalで有効化しないとゲートウェイが
   close code 4014で切断され再試行を繰り返す（トークン自体は正しいまま失敗する）。
 - 現在の実装は単一サーバー運用前提。`log_channel`はギルドごとではなくボット全体で1つ。
+- `MESSAGE_CONTENT`も特権インテント。`GUILD_MEMBERS`同様、未有効化なら4014で切断される。
+  honeypotが無効でもインテントは常に要求するため、有効化は必須。
 - `Cargo.lock`は`.gitignore`済み（バイナリだが意図的に追跡しない）。

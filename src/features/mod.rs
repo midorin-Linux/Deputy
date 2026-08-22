@@ -1,3 +1,4 @@
+pub mod honeypot;
 pub mod member_log;
 pub mod voice_log;
 
@@ -21,6 +22,15 @@ pub fn all(cfg: &Config, store: Arc<dyn LogStore>) -> anyhow::Result<Vec<Box<dyn
             voice_log_cfg,
             store.clone(),
         )));
+    }
+
+    // priority最高。ハニーポットが処分したメッセージは他機能へ流さない。
+    if let Some(honeypot_cfg) = honeypot::config::HoneypotConfig::load(cfg)? {
+        v.push(Box::new(honeypot::Honeypot::new(
+            honeypot_cfg,
+            &cfg.ai,
+            store.clone(),
+        )?));
     }
 
     Ok(v)

@@ -3,6 +3,7 @@ use std::{env, fs, path::PathBuf};
 fn main() {
     println!("cargo:rerun-if-changed=README.md");
     println!("cargo:rerun-if-changed=settings.example.yml");
+    println!("cargo:rerun-if-changed=PROMPT.md");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -16,10 +17,19 @@ fn main() {
 
     let readme_src = manifest_dir.join("README.md");
     let settings_example_src = manifest_dir.join("settings.example.yml");
+    let prompt_src = manifest_dir.join("PROMPT.md");
 
     if readme_src.exists() {
         fs::copy(&readme_src, target_dir.join("README.md"))
             .expect("failed to copy README.md to target directory");
+    }
+
+    // honeypotのシステムプロンプト。`settings.yml`と同じくカレントディレクトリ基準で
+    // 読まれるため、実行ディレクトリへ配っておく。利用者が編集する前提のファイルではないので
+    // `settings.yml`と違い毎回上書きしてよい。
+    if prompt_src.exists() {
+        fs::copy(&prompt_src, target_dir.join("PROMPT.md"))
+            .expect("failed to copy PROMPT.md to target directory");
     }
 
     // 生成するのは「雛形がまだ無いとき」だけ。既存の`settings.yml`には利用者が
