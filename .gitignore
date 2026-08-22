@@ -1,5 +1,6 @@
 # Development
 /target
+Cargo.lock
 settings.yml
 /logs
 
