@@ -4,6 +4,7 @@ mod events;
 
 use std::sync::Arc;
 
+use anyhow::Context as _;
 use config::VoiceLogConfig;
 use diff::diff_channel;
 use serenity::all::{ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, VoiceState};
@@ -49,7 +50,14 @@ impl VoiceLog {
                 &ctx.http,
                 CreateMessage::new().embed(log_embed(title, description)),
             )
-            .await?;
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to send voice log message: guild={:?} channel={}",
+                    new.guild_id,
+                    self.log_channel()
+                )
+            })?;
 
         if let Some(guild_id) = new.guild_id {
             let entry = LogEntry::new("voice_log", guild_id, title).with_user(new.user_id);

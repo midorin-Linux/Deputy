@@ -39,7 +39,7 @@ impl Registry {
                 Ok(Flow::Continue) => {}
                 Ok(Flow::Consume) => break,
                 Err(err) => {
-                    error!(feature = feature.name(), error = %err, "feature failed to handle event");
+                    error!(feature = feature.name(), error = ?err, "feature failed to handle event");
                 }
             }
         }
@@ -102,7 +102,7 @@ impl EventHandler for Registry {
                     if let Err(err) = self.features[index].on_command(&ctx, command).await {
                         error!(
                             feature = self.features[index].name(),
-                            error = %err,
+                            error = ?err,
                             "feature failed to handle command"
                         );
                     }

@@ -13,6 +13,9 @@ const LOG_DIR: &str = "logs";
 /// 既定のログレベル。`env.log_level`が未設定・解釈不能なときのフォールバック。
 const DEFAULT_LOG_LEVEL: &str = "info";
 
+/// ログファイルの保持日数。これを超えた古いファイルは`tracing_appender`が自動で削除する。
+const LOG_RETENTION_DAYS: usize = 14;
+
 fn read_log_level() -> String {
     ConfigBuilder::builder()
         .add_source(
@@ -86,7 +89,12 @@ pub fn init_tracing() -> Result<WorkerGuard> {
     std::fs::create_dir_all(LOG_DIR)
         .with_context(|| format!("Failed to create logs directory: {LOG_DIR}"))?;
 
-    let appender = rolling::daily(LOG_DIR, "deputy.log");
+    let appender = rolling::Builder::new()
+        .rotation(rolling::Rotation::DAILY)
+        .filename_prefix("deputy.log")
+        .max_log_files(LOG_RETENTION_DAYS)
+        .build(LOG_DIR)
+        .with_context(|| format!("Failed to create log appender in: {LOG_DIR}"))?;
     let (non_blocking, guard) = non_blocking(appender);
 
     let env_filter = build_env_filter(&read_log_level());

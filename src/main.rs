@@ -9,7 +9,7 @@ use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use serenity::all::{Client, GatewayIntents};
 use tokio::time::sleep;
-use tracing::info;
+use tracing::{error, info};
 
 fn startup_error(spinner: &ProgressBar, context: &str, err: Error) -> Error {
     spinner.finish_and_clear();
@@ -64,7 +64,10 @@ async fn main() -> Result<()> {
     info!("Startup completed successfully");
     println!("  {} Startup completed successfully", "✓".green());
 
-    client.start().await?;
+    if let Err(err) = client.start().await {
+        error!(error = ?err, "gateway client stopped with error");
+        return Err(err.into());
+    }
 
     Ok(())
 }

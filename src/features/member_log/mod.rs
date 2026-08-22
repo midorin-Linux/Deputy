@@ -3,6 +3,7 @@ mod events;
 
 use std::sync::Arc;
 
+use anyhow::Context as _;
 use config::MemberLogConfig;
 use serenity::all::{
     ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, Member, Timestamp, User,
@@ -52,7 +53,14 @@ impl MemberLog {
 
         self.log_channel()
             .send_message(&ctx.http, CreateMessage::new().embed(embed))
-            .await?;
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to send member join log: guild={} channel={}",
+                    member.guild_id,
+                    self.log_channel()
+                )
+            })?;
 
         let entry =
             LogEntry::new("member_log", member.guild_id, "member joined").with_user(member.user.id);
@@ -74,7 +82,14 @@ impl MemberLog {
                 &ctx.http,
                 CreateMessage::new().embed(log_embed("メンバー退出", description)),
             )
-            .await?;
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to send member leave log: guild={} channel={}",
+                    guild_id,
+                    self.log_channel()
+                )
+            })?;
 
         let entry = LogEntry::new("member_log", guild_id, "member left").with_user(user.id);
         record_or_warn(&self.store, entry).await;
