@@ -7,10 +7,10 @@
 ## よく使うコマンド
 - ビルド: `cargo build`
 - 実行: `cargo run`（カレントディレクトリに`settings.yml`が必要。無ければ`settings.example.yml`をコピー）
-- テスト: `cargo test --workspace --locked`
+- テスト: `cargo test --workspace`
 - フォーマット: `just fmt`（内部で`cargo +nightly fmt --all`。nightly toolchainが必須）
   - フォーマットのみ`+nightly`、他はstableでよい（CIの`fmt`/`clippy`/`test`ジョブが分かれている）
-- lint: `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`
+- lint: `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - CIは`.github/workflows/ci.yml`：fmt(nightly) / clippy(stable) / test(stable) / gitleaks・cargo audit(security)
 
 ## アーキテクチャ

@@ -52,7 +52,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Build release binary
-        run: cargo build --release --locked --bin "$BIN_NAME" --target ${{ matrix.target }}
+        run: cargo build --release --bin "$BIN_NAME" --target ${{ matrix.target }}
         shell: bash
 
       - name: Package artifact
