@@ -8,6 +8,7 @@ use config::MemberLogConfig;
 use serenity::all::{
     ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, Member, Timestamp, User,
 };
+use tracing::{debug, info};
 
 use crate::core::{
     discord::embed::{log_embed, warn_embed},
@@ -38,6 +39,13 @@ impl MemberLog {
             self.cfg.new_account_warn_days,
         );
 
+        debug!(
+            guild_id = %member.guild_id,
+            user_id = %member.user.id,
+            is_new_account = is_new,
+            "member joined"
+        );
+
         let description = format!(
             "{} ({}) がサーバーに参加しました。\nアカウント作成日: {}",
             member.user.tag(),
@@ -66,6 +74,8 @@ impl MemberLog {
             LogEntry::new("member_log", member.guild_id, "member joined").with_user(member.user.id);
         record_or_warn(&self.store, entry).await;
 
+        info!(guild_id = %member.guild_id, user_id = %member.user.id, "member join logged");
+
         Ok(())
     }
 
@@ -93,6 +103,8 @@ impl MemberLog {
 
         let entry = LogEntry::new("member_log", guild_id, "member left").with_user(user.id);
         record_or_warn(&self.store, entry).await;
+
+        info!(guild_id = %guild_id, user_id = %user.id, "member leave logged");
 
         Ok(())
     }

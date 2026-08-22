@@ -8,6 +8,7 @@ use anyhow::Context as _;
 use config::VoiceLogConfig;
 use diff::diff_channel;
 use serenity::all::{ChannelId, CommandInteraction, Context, CreateMessage, FullEvent, VoiceState};
+use tracing::{debug, info};
 
 use crate::core::{
     discord::embed::log_embed,
@@ -42,6 +43,7 @@ impl VoiceLog {
         );
 
         let Some((title, description)) = events::describe(&user_tag(new), diff) else {
+            debug!(guild_id = ?new.guild_id, user_id = %new.user_id, "voice state update ignored (no channel change)");
             return Ok(());
         };
 
@@ -63,6 +65,8 @@ impl VoiceLog {
             let entry = LogEntry::new("voice_log", guild_id, title).with_user(new.user_id);
             record_or_warn(&self.store, entry).await;
         }
+
+        info!(guild_id = ?new.guild_id, user_id = %new.user_id, event = title, "voice log recorded");
 
         Ok(())
     }
