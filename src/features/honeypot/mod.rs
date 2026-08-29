@@ -102,6 +102,26 @@ impl Honeypot {
 
         if !verdict.is_spam {
             debug!(user_id = %msg.author.id, reason = %verdict.reason, "honeypot judged message as clean");
+
+            // debug_mode中は判定の裏取りができるよう、シロの判定も管理チャンネルへ残す。
+            if self.cfg.debug_mode {
+                self.notify(
+                    ctx,
+                    log_embed(
+                        "スパムではないと判定しました（debug_mode）",
+                        format!(
+                            "対象: {} ({})\n判定経路: {}\n理由: {}\nチャンネル: <#{}>",
+                            msg.author.tag(),
+                            msg.author.id,
+                            verdict.source.as_str(),
+                            verdict.reason,
+                            msg.channel_id,
+                        ),
+                    ),
+                )
+                .await;
+            }
+
             return Ok(Flow::Continue);
         }
 
