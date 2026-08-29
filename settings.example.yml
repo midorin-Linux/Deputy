@@ -28,3 +28,42 @@ features:
   voice_log:
     enabled: true
     log_channel: 123456789012345678
+
+  honeypot:
+    enabled: false
+    # BAN実行・AI判定失敗を通知する管理者向けチャンネル
+    log_channel: 123456789012345678
+
+    # 監視対象のハニーポットチャンネルID（複数指定可）
+    honeypot_channels: [123456789012345678]
+
+    # 特別な理由がない限り、本番環境では有効(true)にしないでください。
+    # 実際のBANを行わず、判定結果の通知だけを行う検証モードになります。
+    debug_mode: false
+
+    # 監視チャンネルへ投稿したアカウントを、ban_triggerもAI判定も一切問わず即BANする。
+    # 強力なため既定は無効(false)。有効にすると他の条件より優先される。
+    unconditional_ban: false
+
+    # AIにスパム判定をさせるかどうか。falseならban_triggerの条件のみで判断する
+    enable_ai_judgment: true
+
+    # BAN時にさかのぼって削除するメッセージの日数（Discord仕様で0〜7）
+    delete_message_days: 3
+
+    # このロールを持つメンバーは判定対象外（管理者・モデレータの誤BAN防止）
+    exempt_roles: []
+
+    # AI判定より前に評価される高速フィルタ
+    ban_trigger:
+      # 招待リンクが含まれている場合( discord.gg/* | discord.com/invite/* | discordapp.com/invite/* )
+      has_invite_link: true
+      # 全体メンションまたはロールメンションが含まれている場合
+      has_role_mention: true
+      # メンション数の閾値(0でオフ)
+      mention_threshold: 3
+
+    # AI判定に失敗したときの扱い。
+    # skip   = エラーログのみ残して見逃す
+    # notify = 見逃したうえでlog_channelへ警告を通知する（既定）
+    ai_failure_policy: notify
