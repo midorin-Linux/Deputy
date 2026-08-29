@@ -91,7 +91,8 @@ impl Honeypot {
         }
 
         // 既に処理済みのユーザーは、連投されても再判定しない（AI呼び出しを無駄に増やさない）。
-        if self.handled.contains(msg.author.id) {
+        // debug_mode中は検証のため、処理済みユーザーでも毎回判定し直す。
+        if !self.cfg.debug_mode && self.handled.contains(msg.author.id) {
             return Ok(Flow::Continue);
         }
 
@@ -170,7 +171,7 @@ impl Honeypot {
 
         // BAN実行前にアトミックに登録する。並行して届いた同一ユーザーのメッセージが
         // 同時にここへ到達しても、実際に処分するのは最初の1件だけになる。
-        if !self.handled.mark(msg.author.id) {
+        if !self.cfg.debug_mode && !self.handled.mark(msg.author.id) {
             return Ok(Flow::Consume);
         }
 
