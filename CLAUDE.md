@@ -45,6 +45,13 @@ AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用す
   `priority()`は50（honeypotの100より後）。再生キューは自作せずsongbirdの`builtin-queue`を使う。
   話者はユーザー単位で`data/tts_speakers.json`へ永続化（`settings.yml`と同じくカレントディレクトリ基準）。
   純ロジック（`sanitize.rs`/`speakers.rs`）はDiscord接続なしでテストできる。
+- `src/features/agent/`: ボットへのメンションまたは`/ask`でLLMに問い合わせ、応答をそのチャンネルに返信する。
+  `/reset`でチャンネルの会話履歴をクリアする（ephemeral応答）。`priority()`は10（honeypot/ttsより後）。
+  会話履歴はチャンネル単位・揮発性（`Mutex<HashMap<ChannelId, VecDeque<_>>>`）で永続化しない。
+  クールダウンはユーザー単位で、honeypot/dedup.rsの`HandledUsers`と同じTTL付き有界Mutex<HashMap>
+  パターンを流用している。システムプロンプトは`AGENT_PROMPT.md`（`settings.yml`と同じくカレントディレクトリ
+  基準）で、無い場合は起動時エラーにせず組み込みの既定プロンプトへフォールバックする（VOICEVOX未起動時の
+  扱いに合わせた寛容路線）。純ロジック（`history.rs`/`ratelimit.rs`）はDiscord接続なしでテストできる。
 - `src/services/`: 外部APIクライアント。**`use serenity`を書かない**のが規約（`services/voicevox`はTTS用）。
 - 依存方向: `main → features → core / services`。`core`は`features`をimportしない。
 

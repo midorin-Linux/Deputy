@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod honeypot;
 pub mod member_log;
 pub mod tts;
@@ -36,6 +37,10 @@ pub fn all(cfg: &Config, store: Arc<dyn LogStore>) -> anyhow::Result<Vec<Box<dyn
             &cfg.ai,
             store.clone(),
         )?));
+    }
+
+    if let Some(agent_cfg) = agent::config::AgentConfig::load(cfg)? {
+        v.push(Box::new(agent::Agent::new(agent_cfg, &cfg.ai)?));
     }
 
     Ok(v)

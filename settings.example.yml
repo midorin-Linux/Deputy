@@ -82,3 +82,15 @@ features:
     # skip   = エラーログのみ残して見逃す
     # notify = 見逃したうえでlog_channelへ警告を通知する（既定）
     ai_failure_policy: notify
+
+  agent:
+    enabled: false
+
+    # 使用するモデルID。省略時は共通の ai.model_id を使う
+    # model: gpt-4o-mini
+
+    # チャンネルごとに保持する会話履歴の件数（ユーザー発言・応答をあわせた件数）
+    history_limit: 20
+
+    # ユーザー単位のクールダウン秒数（0でオフ）
+    cooldown_secs: 15
