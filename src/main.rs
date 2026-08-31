@@ -32,6 +32,11 @@ async fn main() -> Result<()> {
     );
     spinner.enable_steady_tick(std::time::Duration::from_millis(80));
 
+    // rustlsの既定CryptoProviderを明示する。依存ツリーでring（serenity/songbird系）と
+    // aws-lc-rs（reqwest 0.13系）の両featureが有効なため自動選択できず、未指定のままだと
+    // VC接続（songbirdのTLS確立）時にpanicする。失敗は「設定済み」を意味するので無視してよい。
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     // Tracingの初期化
     spinner.set_message("Initializing tracing...");
     let _guard = init_tracing()
