@@ -1,5 +1,6 @@
 pub mod honeypot;
 pub mod member_log;
+pub mod tts;
 pub mod voice_log;
 
 use std::sync::Arc;
@@ -22,6 +23,10 @@ pub fn all(cfg: &Config, store: Arc<dyn LogStore>) -> anyhow::Result<Vec<Box<dyn
             voice_log_cfg,
             store.clone(),
         )));
+    }
+
+    if let Some(tts_cfg) = tts::config::TtsConfig::load(cfg)? {
+        v.push(Box::new(tts::Tts::new(tts_cfg)?));
     }
 
     // priority最高。ハニーポットが処分したメッセージは他機能へ流さない。

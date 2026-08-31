@@ -12,15 +12,18 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use serenity::all::{
     CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
-    CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-    FullEvent, GuildId, Message, Permissions, ResolvedOption, ResolvedValue, UserId,
+    CreateEmbed, CreateMessage, FullEvent, GuildId, Message, Permissions, ResolvedOption,
+    ResolvedValue, UserId,
 };
 use tracing::{debug, error, info, warn};
 
 use crate::{
     core::{
         config::AiConfig,
-        discord::embed::{log_embed, warn_embed},
+        discord::{
+            embed::{log_embed, warn_embed},
+            interaction::ephemeral_respond,
+        },
         feature::{Feature, Flow},
         store::{LogEntry, LogStore, record_or_warn},
     },
@@ -91,7 +94,8 @@ impl Honeypot {
         }
 
         // 既に処理済みのユーザーは、連投されても再判定しない（AI呼び出しを無駄に増やさない）。
-        if self.handled.contains(msg.author.id) {
+        // debug_mode中は検証のため、処理済みユーザーでも毎回判定し直す。
+        if !self.cfg.debug_mode && self.handled.contains(msg.author.id) {
             return Ok(Flow::Continue);
         }
 
@@ -101,6 +105,26 @@ impl Honeypot {
 
         if !verdict.is_spam {
             debug!(user_id = %msg.author.id, reason = %verdict.reason, "honeypot judged message as clean");
+
+            // debug_mode中は判定の裏取りができるよう、シロの判定も管理チャンネルへ残す。
+            if self.cfg.debug_mode {
+                self.notify(
+                    ctx,
+                    log_embed(
+                        "スパムではないと判定しました（debug_mode）",
+                        format!(
+                            "対象: {} ({})\n判定経路: {}\n理由: {}\nチャンネル: <#{}>",
+                            msg.author.tag(),
+                            msg.author.id,
+                            verdict.source.as_str(),
+                            verdict.reason,
+                            msg.channel_id,
+                        ),
+                    ),
+                )
+                .await;
+            }
+
             return Ok(Flow::Continue);
         }
 
@@ -170,7 +194,7 @@ impl Honeypot {
 
         // BAN実行前にアトミックに登録する。並行して届いた同一ユーザーのメッセージが
         // 同時にここへ到達しても、実際に処分するのは最初の1件だけになる。
-        if !self.handled.mark(msg.author.id) {
+        if !self.cfg.debug_mode && !self.handled.mark(msg.author.id) {
             return Ok(Flow::Consume);
         }
 
@@ -411,16 +435,7 @@ impl Honeypot {
         ic: &CommandInteraction,
         embed: CreateEmbed,
     ) -> anyhow::Result<()> {
-        ic.create_response(
-            &ctx.http,
-            CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new()
-                    .embed(embed)
-                    .ephemeral(true),
-            ),
-        )
-        .await
-        .context("failed to respond to honeypot command")
+        ephemeral_respond(ctx, ic, embed).await
     }
 }
 

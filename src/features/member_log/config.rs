@@ -24,8 +24,8 @@ impl FeatureToggle for MemberLogConfig {
         self.enabled
     }
 
-    fn raw_log_channel(&self) -> u64 {
-        self.log_channel
+    fn raw_log_channel(&self) -> Option<u64> {
+        Some(self.log_channel)
     }
 }
 

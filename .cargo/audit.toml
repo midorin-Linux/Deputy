@@ -4,5 +4,17 @@ ignore = [
     "RUSTSEC-2026-0049",
     "RUSTSEC-2026-0098",
     "RUSTSEC-2026-0099",
-    "RUSTSEC-2026-0104"
+    "RUSTSEC-2026-0104",
+
+    # songbird → davey → openmls_rust_crypto → hpke-rs 経由のlibcrux-*。
+    # 修正版はあるがhpke-rs 0.6.1が旧版をピンしており、こちらでは取り込めない。
+    # daveyはsongbirdのdriver機能（音声再生）の必須依存のため外すこともできない。
+    # davey/hpke-rsの更新後にこのブロックを削除して再確認すること。
+    # 該当コードはDiscord音声E2EEの復号まわりで、本ボットは送信（TTS）専用のため実害は低い。
+    "RUSTSEC-2026-0124", # libcrux-chacha20poly1305: 過長バッファでpanic（fix >=0.0.8）
+    "RUSTSEC-2026-0207", # libcrux-sha3: incremental SHAKE APIの誤出力（fix >=0.0.10）
+    "RUSTSEC-2026-0208", # libcrux-sha3: AVX2 SHAKE-256でpanicの可能性（fix >=0.0.10）
+    "RUSTSEC-2026-0209", # libcrux-aesgcm: AAD長の上限未検証（修正版なし）
+    "RUSTSEC-2026-0211", # libcrux-aesgcm: タグ検証が非定数時間（修正版なし）
+    "RUSTSEC-2026-0212", # libcrux-secrets: aarch64でのct-swap誤出力（fix >=0.0.6）
 ]
