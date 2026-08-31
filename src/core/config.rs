@@ -106,8 +106,11 @@ impl Config {
 /// `load_feature_config`はこれだけを使って有効/無効判定とチャンネルIDの検証を行う。
 pub trait FeatureToggle {
     fn is_enabled(&self) -> bool;
-    /// 検証前の生のチャンネルID。0は「未指定」を意味する。
-    fn raw_log_channel(&self) -> u64;
+    /// 検証前の生のチャンネルID。
+    /// - `Some(0)`: 「未指定」。有効時は`ConfigError::InvalidLogChannel`。
+    /// - `Some(n)` (n != 0): 検証OK。
+    /// - `None`: そもそもログチャンネルを持たない機能（TTS等）。検証自体をスキップする。
+    fn raw_log_channel(&self) -> Option<u64>;
 }
 
 /// `cfg.features`から`name`セクションを取り出し、`enabled` / `log_channel`の
@@ -115,8 +118,9 @@ pub trait FeatureToggle {
 ///
 /// ルール（member_log・voice_logの両方で必要だったため、ここへ一本化する）：
 /// - セクションが無い、または`enabled = false`なら`None`。
-/// - 有効なのに`log_channel`が0（未指定）なら`ConfigError::InvalidLogChannel`。
+/// - 有効なのに`log_channel`が`Some(0)`（未指定）なら`ConfigError::InvalidLogChannel`。
 ///   `ChannelId::new(0)`は実行時にpanicするため、起動時に前倒しで弾く。
+/// - `log_channel`が`None`（そのfeatureがログチャンネルを持たない）ならこの検証はスキップする。
 pub fn load_feature_config<T>(cfg: &Config, name: &'static str) -> Result<Option<T>>
 where
     T: DeserializeOwned + FeatureToggle,
@@ -132,7 +136,7 @@ where
         return Ok(None);
     }
 
-    if parsed.raw_log_channel() == 0 {
+    if let Some(0) = parsed.raw_log_channel() {
         return Err(ConfigError::InvalidLogChannel { feature: name }.into());
     }
 
@@ -183,8 +187,8 @@ mod tests {
             self.enabled
         }
 
-        fn raw_log_channel(&self) -> u64 {
-            self.log_channel
+        fn raw_log_channel(&self) -> Option<u64> {
+            Some(self.log_channel)
         }
     }
 
@@ -198,5 +202,35 @@ mod tests {
         );
         let err = load_feature_config::<DummyFeatureConfig>(&cfg, "dummy").unwrap_err();
         assert!(err.to_string().contains("dummy"), "unexpected error: {err}");
+    }
+
+    /// `raw_log_channel`が`None`を返す機能（TTS等、ログチャンネルを持たない）は
+    /// チャンネル検証自体をスキップし、`log_channel`が無くても`Some(_)`でロードされること。
+    #[derive(Debug, Clone, Deserialize)]
+    struct DummyNoChannelFeatureConfig {
+        #[serde(default)]
+        enabled: bool,
+    }
+
+    impl FeatureToggle for DummyNoChannelFeatureConfig {
+        fn is_enabled(&self) -> bool {
+            self.enabled
+        }
+
+        fn raw_log_channel(&self) -> Option<u64> {
+            None
+        }
+    }
+
+    #[test]
+    fn load_feature_config_skips_channel_validation_when_raw_log_channel_is_none() {
+        let mut cfg = base_config("t");
+        cfg.features.insert(
+            "dummy_no_channel".to_string(),
+            serde_json::json!({ "enabled": true }),
+        );
+        let loaded =
+            load_feature_config::<DummyNoChannelFeatureConfig>(&cfg, "dummy_no_channel").unwrap();
+        assert!(loaded.is_some());
     }
 }

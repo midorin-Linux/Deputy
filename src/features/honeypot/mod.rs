@@ -12,15 +12,18 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use serenity::all::{
     CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
-    CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-    FullEvent, GuildId, Message, Permissions, ResolvedOption, ResolvedValue, UserId,
+    CreateEmbed, CreateMessage, FullEvent, GuildId, Message, Permissions, ResolvedOption,
+    ResolvedValue, UserId,
 };
 use tracing::{debug, error, info, warn};
 
 use crate::{
     core::{
         config::AiConfig,
-        discord::embed::{log_embed, warn_embed},
+        discord::{
+            embed::{log_embed, warn_embed},
+            interaction::ephemeral_respond,
+        },
         feature::{Feature, Flow},
         store::{LogEntry, LogStore, record_or_warn},
     },
@@ -432,16 +435,7 @@ impl Honeypot {
         ic: &CommandInteraction,
         embed: CreateEmbed,
     ) -> anyhow::Result<()> {
-        ic.create_response(
-            &ctx.http,
-            CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new()
-                    .embed(embed)
-                    .ephemeral(true),
-            ),
-        )
-        .await
-        .context("failed to respond to honeypot command")
+        ephemeral_respond(ctx, ic, embed).await
     }
 }
 

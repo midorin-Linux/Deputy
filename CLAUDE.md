@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 個人用DiscordボットアプリケーションDeputy（Rust, edition 2024）。`serenity`でGatewayに接続し、
-入退出ログ（member_log）・VC入退出ログ（voice_log）・ハニーポットによるスパム自動BAN（honeypot）を提供する。
-AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用する。
+入退出ログ（member_log）・VC入退出ログ（voice_log）・ハニーポットによるスパム自動BAN（honeypot）・
+VOICEVOXによる読み上げ（tts）を提供する。
+AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用する。音声の再生は`songbird`。
 
 ## よく使うコマンド
 - ビルド: `cargo build`
@@ -40,7 +41,12 @@ AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用す
   LLMで判定し、スパムをBANする。`priority()`は100（Message系で最優先）、処分したメッセージは`Flow::Consume`で
   後続へ流さない。システムプロンプトは`PROMPT.md`（`settings.yml`と同じくカレントディレクトリ基準）。
   純ロジック（`rules.rs`/`verdict.rs`/`events.rs`/`dedup.rs`/`action.rs`）はDiscord接続なしでテストできる。
-- 依存方向: `main → features → core`。`core`は`features`をimportしない。
+- `src/features/tts/`: `/join`したテキストチャンネルの投稿をVOICEVOXで合成し、VCで読み上げる。
+  `priority()`は50（honeypotの100より後）。再生キューは自作せずsongbirdの`builtin-queue`を使う。
+  話者はユーザー単位で`data/tts_speakers.json`へ永続化（`settings.yml`と同じくカレントディレクトリ基準）。
+  純ロジック（`sanitize.rs`/`speakers.rs`）はDiscord接続なしでテストできる。
+- `src/services/`: 外部APIクライアント。**`use serenity`を書かない**のが規約（`services/voicevox`はTTS用）。
+- 依存方向: `main → features → core / services`。`core`は`features`をimportしない。
 
 ## コード規約
 - コミットメッセージ・コメント・ログ文言（Discord通知文含む）は日本語。コード識別子は英語。
@@ -50,9 +56,11 @@ AI連携（`AiConfig`/`async-openai`）はhoneypotのスパム判定で使用す
   一本化されている。新しいfeature設定を追加する際もこれに乗ること（重複実装しない）。
 
 ## 注意点
-- `settings.yml`の読み込み先・`logs/`の出力先は実行ファイルの場所ではなく**プロセスのカレントディレクトリ**。
+- `settings.yml`の読み込み先・`logs/`と`data/`の出力先は実行ファイルの場所ではなく**プロセスのカレントディレクトリ**。
   `cargo run`はリポジトリルート、ビルド済みバイナリは`target/<profile>/`で実行する想定（README参照）。
-- `settings.yml`と`logs/`は`.gitignore`済み。トークンを含むためコミットしない。
+- `settings.yml`と`logs/`・`data/`は`.gitignore`済み。トークンを含むためコミットしない。
+- `tts`はVOICEVOX ENGINEが別途起動している前提。未起動でもボットは起動でき、合成のたびに警告ログを出す。
+  `features.tts`だけは`log_channel`を持たない（`FeatureToggle::raw_log_channel`が`None`を返す唯一の機能）。
 - Discordの`GUILD_MEMBERS`は特権インテント。Developer Portalで有効化しないとゲートウェイが
   close code 4014で切断され再試行を繰り返す（トークン自体は正しいまま失敗する）。
 - 現在の実装は単一サーバー運用前提。`log_channel`はギルドごとではなくボット全体で1つ。

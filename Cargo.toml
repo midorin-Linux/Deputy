@@ -24,3 +24,6 @@ tokio = { version = "1.53", features = ["full"] }
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+songbird = { version = "0.6.0", features = ["builtin-queue"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
+symphonia = { version = "0.5", features = ["wav", "pcm"] }

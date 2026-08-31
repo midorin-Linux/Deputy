@@ -3,6 +3,7 @@
 Cargo.lock
 settings.yml
 /logs
+/data
 
 # IDE
 /.idea

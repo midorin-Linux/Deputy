@@ -29,6 +29,21 @@ features:
     enabled: true
     log_channel: 123456789012345678
 
+  tts:
+    enabled: false
+
+    # VOICEVOX ENGINEのベースURL。ENGINEを起動しておく必要がある
+    voicevox_url: http://127.0.0.1:50021
+
+    # /speaker で個別に設定していないユーザーに使う話者ID
+    default_speaker: 3
+
+    # 1メッセージあたりの読み上げ文字数の上限。超えた分は切り捨てる
+    max_chars: 120
+
+    # VOICEVOX ENGINEへのリクエストタイムアウト（秒）
+    request_timeout_secs: 30
+
   honeypot:
     enabled: false
     # BAN実行・AI判定失敗を通知する管理者向けチャンネル

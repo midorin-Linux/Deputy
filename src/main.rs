@@ -1,5 +1,6 @@
 pub mod core;
 pub mod features;
+pub mod services;
 
 use core::{config::Config, registry::Registry, store::NoopStore, telemetry::init_tracing};
 use std::sync::Arc;
@@ -8,6 +9,7 @@ use anyhow::{Error, Result};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use serenity::all::{Client, GatewayIntents};
+use songbird::SerenityInit;
 use tracing::{error, info};
 
 fn startup_error(spinner: &ProgressBar, context: &str, err: Error) -> Error {
@@ -64,6 +66,7 @@ async fn main() -> Result<()> {
     spinner.set_message("Connecting to Discord...");
     let mut client = Client::builder(config.discord.token.expose(), intents)
         .event_handler(registry)
+        .register_songbird()
         .await
         .map_err(|err| startup_error(&spinner, "Failed to build Discord client", err.into()))?;
 

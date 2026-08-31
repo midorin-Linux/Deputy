@@ -34,7 +34,7 @@ cargo install just
 | --- | --- | --- |
 | `GUILDS` | ギルド情報・VoiceStateのキャッシュ | - |
 | `GUILD_MEMBERS` | `member_log`（入退出ログ） | 要有効化 |
-| `GUILD_VOICE_STATES` | `voice_log`（VC入退出ログ） | - |
+| `GUILD_VOICE_STATES` | `voice_log`（VC入退出ログ）・`tts`（VC接続と自動退出） | - |
 | `GUILD_MESSAGES` | `honeypot`（メッセージ受信） | - |
 | `MESSAGE_CONTENT` | `honeypot`（本文・添付の判定） | 要有効化 |
 
@@ -68,10 +68,22 @@ cargo run
 
 `settings.yml` と `logs/` はいずれも `.gitignore` 済みです。トークンを含むため、コミットしないでください。
 
-### 3. 設定項目
+### 3. VOICEVOX ENGINEの起動（`tts` を使う場合のみ）
+
+読み上げ機能は音声合成に [VOICEVOX ENGINE](https://github.com/VOICEVOX/voicevox_engine) のHTTP APIを使います。
+ボットとは別にENGINE（またはVOICEVOXアプリ本体）を起動しておき、そのURLを
+`features.tts.voicevox_url` に設定してください（既定は `http://127.0.0.1:50021`）。
+
+ENGINEが起動していなくてもボット自体は起動できますが、読み上げのたびに合成へ失敗し、
+警告ログが出るだけで音声は再生されません。
+
+`tts: enabled: false` のままなら、ENGINEは不要です。
+
+### 4. 設定項目
 
 各項目の説明は [`settings.example.yml`](settings.example.yml) のコメントを参照してください。
-`features.*.log_channel` には通知先チャンネルのIDを設定します（`0` のままだと起動時にエラーで停止します）。
+`log_channel` を持つ機能（`member_log` / `voice_log` / `honeypot`）では、そこへ通知先チャンネルのIDを
+設定します（`0` のままだと起動時にエラーで停止します）。`tts` は通知先を持たないため不要です。
 
 > **注記:** 現在の実装は**単一サーバーでの運用を前提**としています。
 > `log_channel` はギルドごとではなくボット全体で1つのため、複数のサーバーに参加させると
@@ -102,3 +114,26 @@ LLMへ渡すシステムプロンプトは [`PROMPT.md`](PROMPT.md) にあり、
 - `debug_mode: true` にすると、判定は行いますが実際のBANは行いません。導入直後の精度確認に使ってください。
 - `/honeypot list` で直近20件の処分（対象・判定経路・理由）を確認し、`/honeypot unban <user>` で
   その場で解除できます。どちらもBAN権限を持つメンバーにのみ表示され、応答は実行者にしか見えません。
+
+### tts（VOICEVOXによる読み上げ）
+
+テキストチャンネルへの投稿をVOICEVOXで音声合成し、ボイスチャンネルで読み上げます。
+読み上げ対象は**`/join` を実行したテキストチャンネル**です（設定ファイルでの固定はしません）。
+
+| コマンド | 説明 |
+| --- | --- |
+| `/join` | 実行者が入っているVCへ接続し、コマンドを実行したテキストチャンネルを読み上げ対象にする |
+| `/leave` | VCから退出し、読み上げを終了する |
+| `/skip` | 読み上げ中の1件をスキップする |
+| `/speaker <id>` | 自分の発言に使う話者IDを設定する（ユーザーごと・サーバー共通） |
+
+- 話者の設定は `data/tts_speakers.json` に保存され、ボットを再起動しても残ります
+  （`settings.yml` や `logs/` と同じく**プロセスのカレントディレクトリ**基準です）。
+  未設定のユーザーには `default_speaker` が使われます。
+- 有効な話者IDはVOICEVOX ENGINEの `/speakers` で確認できます。存在しないIDを設定しても
+  コマンドは成功し、実際に読み上げようとした時点で合成に失敗します（警告ログのみ）。
+- URL・メンション・カスタム絵文字・コードブロックは読み上げ前に除去または置換され、
+  `max_chars` を超えた分は切り捨てられます。整形後に空になった投稿は読み上げません。
+- ボットの発言、および読み上げ対象チャンネル以外の投稿は読み上げません。
+- VCに自分以外の人間がいなくなると自動で退出します。
+- `/join` の紐付けは永続化しません。ボットを再起動したら `/join` し直してください。
